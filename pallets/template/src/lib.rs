@@ -13,9 +13,8 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet_prelude::*;
-	use frame_system::{pallet, pallet_prelude::*};
-
+	use frame_support::{inherent::Vec, pallet_prelude::*, sp_runtime};
+	use frame_system::pallet_prelude::*;
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
@@ -26,15 +25,22 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn something)]
+	#[pallet::getter(fn get_asset_id)]
+	pub type AssetId<T: Config> = StorageValue<_, T::AssetIdParameter, OptionQuery>;
 
-	pub type Something<T> = StorageValue<_, u32>;
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
-		SomethingStored { something: u32, who: T::AccountId },
+		SomethingStored {
+			something: u32,
+			who: T::AccountId,
+		},
+		SomethingHappened {
+			done: T::AssetIdParameter,
+			user: T::AccountId,
+		},
 	}
 
 	// Errors inform users that something went wrong.
@@ -45,13 +51,36 @@ pub mod pallet {
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
 	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-			pallet_assets::Pallet::<T>::create();
+		pub fn create_token(
+			origin: OriginFor<T>,
+			name: Vec<u8>,
+			symbol: Vec<u8>,
+			id: T::AssetIdParameter,
+			decimals: u8,
+			initial_supply: T::Balance,
+		) -> DispatchResult {
+			let owner = ensure_signed(origin.clone())?;
+
+			let token_owner =
+				<T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(owner.clone());
+
+			pallet_assets::Pallet::<T>::create(
+				origin.clone(),
+				id.clone(),
+				token_owner.clone(),
+				initial_supply,
+			);
+
+			pallet_assets::Pallet::<T>::set_metadata(origin, id.clone(), name, symbol, decimals);
+			Self::deposit_event(Event::<T>::SomethingHappened {
+				done: id.clone(),
+				user: owner.clone(),
+			});
 			Ok(())
 		}
 	}

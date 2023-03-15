@@ -7,8 +7,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use frame_support::traits::AsEnsureOriginWithArg;
-use frame_system::EnsureRoot;
-use frame_system::EnsureSigned;
+use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_assets;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
@@ -72,6 +71,8 @@ pub type Index = u32;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
+
+pub type AssetIdParameter = codec::Compact<u32>;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -221,7 +222,7 @@ impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = u128;
 	type AssetId = u32;
-	type AssetIdParameter = codec::Compact<u32>;
+	type AssetIdParameter = AssetIdParameter;
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
 	type ForceOrigin = EnsureRoot<AccountId>;
